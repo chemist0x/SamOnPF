@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ticker Marquee</title>
+    <style>
+      :root {
+        --speed: 18s;
+        --visible-count: 6;
+        --item-gap: 0px;
+        --direction: reverse;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+
+      .ticker {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .ticker__track {
+        display: flex;
+        width: max-content;
+        animation: scroll var(--speed) linear infinite;
+        animation-direction: var(--direction);
+        will-change: transform;
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+      }
+
+      .ticker__sequence {
+        display: flex;
+        gap: var(--item-gap);
+      }
+
+      .ticker__img {
+        width: auto;
+        height: auto;
+        display: block;
+        flex: 0 0 auto;
+      }
+
+      @keyframes scroll {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(calc(var(--marquee-distance, 1000px) * -1));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ticker" id="ticker">
+      <div class="ticker__track" id="tickerTrack">
+        <div class="ticker__sequence" id="tickerSequence">
+          <img class="ticker__img" src="ticker.png" alt="" />
+        </div>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const container = document.getElementById("ticker");
+        const track = document.getElementById("tickerTrack");
+        const sequence = document.getElementById("tickerSequence");
+        const baseImg = sequence.querySelector("img");
+
+        const getVisibleCount = () => {
+          const raw = getComputedStyle(document.documentElement)
+            .getPropertyValue("--visible-count")
+            .trim();
+          const count = Number(raw);
+          return Number.isFinite(count) && count > 0 ? count : 6;
+        };
+
+        const getGap = () => {
+          const styles = getComputedStyle(sequence);
+          const gapValue = styles.columnGap || styles.gap || "0";
+          const gap = Number.parseFloat(gapValue);
+          return Number.isFinite(gap) ? gap : 0;
+        };
+
+        const buildTrack = () => {
+          if (!baseImg.naturalWidth) return;
+
+          sequence.innerHTML = "";
+          const baseClone = baseImg.cloneNode();
+          sequence.appendChild(baseClone);
+
+          const containerWidth = container.getBoundingClientRect().width || 1;
+          const visibleCount = getVisibleCount();
+          const itemWidth = containerWidth / visibleCount;
+          const gap = getGap();
+          const copies = Math.max(
+            2,
+            Math.ceil(containerWidth / (itemWidth + gap)) + 1
+          );
+
+          baseClone.style.width = `${itemWidth}px`;
+          baseClone.style.height = "auto";
+
+          for (let i = 1; i < copies; i += 1) {
+            sequence.appendChild(baseClone.cloneNode());
+          }
+
+          const clone = sequence.cloneNode(true);
+          clone.removeAttribute("id");
+
+          track.innerHTML = "";
+          track.appendChild(sequence);
+          track.appendChild(clone);
+
+          const sequenceWidth = itemWidth * copies + gap * (copies - 1);
+          track.style.setProperty("--marquee-distance", `${sequenceWidth}px`);
+        };
+
+        const ensureLoaded = () => {
+          if (baseImg.complete && baseImg.naturalWidth) {
+            buildTrack();
+          } else {
+            baseImg.addEventListener("load", buildTrack, { once: true });
+          }
+        };
+
+        window.addEventListener("resize", ensureLoaded);
+        ensureLoaded();
+      })();
+    </script>
+  </body>
+</html>
